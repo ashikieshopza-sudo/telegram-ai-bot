@@ -4,13 +4,14 @@ from flask import Flask
 from threading import Thread
 import google.generativeai as genai
 
-# টোকেন ও এপিআই কি কনফিগারেশন
+# টেলিগ্রাম টোকেন ও জেমিনি এপিআই কি কনফিগারেশন
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# জেমিনি এআই সেটআপ
+# জেমিনি এআই সেটআপ (সঠিক ও আপডেট মডেল ব্যবহার করা হয়েছে)
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+    # জেমিনি মডেল ইনিশিয়ালাইজেশন
     gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 else:
     gemini_model = None
@@ -20,22 +21,22 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Gemini AI Mentor Bot is running!"
+    return "Gemini AI Telegram Bot is running successfully!"
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     welcome_text = (
-        "হ্যালো! আমি আপনার জেমিনি এআই মেন্টর বট।\n\n"
-        "যেকোনো প্রশ্ন করতে সরাসরি লিখুন অথবা কমান্ড ব্যবহার করুন:\n"
-        "🔹 জেমিনির সাহায্য নিতে লিখুন: /gemini [আপনার প্রশ্ন]"
+        "হ্যালো! আমি আপনার জেমিনি এআই মেন্টর বট। 🤖\n\n"
+        "আপনি যেকোনো প্রশ্ন সরাসরি লিখে পাঠাতে পারেন অথবা নিচের কমান্ডটি ব্যবহার করতে পারেন:\n"
+        "🔹 /gemini [আপনার প্রশ্ন]"
     )
     bot.reply_to(message, welcome_text)
 
-# Gemini কমান্ড হ্যান্ডলার
+# /gemini কমান্ড হ্যান্ডলার
 @bot.message_handler(commands=['gemini'])
-def ask_gemini(message):
+def ask_gemini_command(message):
     if not gemini_model:
-        bot.reply_to(message, "দুঃখিত, জেমিনি এপিআই কি সেট করা নেই।")
+        bot.reply_to(message, "দুঃখিত, জেমিনি এপিআই কি (GEMINI_API_KEY) সেট করা নেই।")
         return
     
     prompt = message.text.replace("/gemini", "").strip()
@@ -49,11 +50,11 @@ def ask_gemini(message):
     except Exception as e:
         bot.reply_to(message, f"ত্রুটি ঘটেছে: {str(e)}")
 
-# সাধারণ টেক্সট মেসেজের উত্তর দেওয়ার জন্য (ঐচ্ছিক)
+# সরাসরি সাধারণ টেক্সট মেসেজের উত্তর দেওয়ার হ্যান্ডলার
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
     if not gemini_model:
-        bot.reply_to(message, "জেমিনি মডেল সেটআপ করা নেই।")
+        bot.reply_to(message, "জেমিনি এআই কনফিগার করা নেই।")
         return
     
     try:
@@ -67,6 +68,8 @@ def run_bot():
     bot.infinity_polling(skip_pending=True)
 
 if __name__ == "__main__":
+    # ব্যাকগ্রাউন্ড থ্রেডে টেলিগ্রাম বট পোলিং চালু করা
     t = Thread(target=run_bot)
     t.start()
+    # রেন্ডার পোর্টের প্রয়োজনীয়তা পূরণের জন্য ফ্লাস্ক সার্ভার চালু করা
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
